@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.zerock.mapper.BoardMapper"> <!-- 패키지명.인터페이스 -->
+
+
+	<select id="getList" resultType="org.zerock.domain.BoardVO">
+			<!-- 인터페이스의 메서드명을 xml의 id값으로 -->
+		<![CDATA[
+			select * from cm_qna where bno > 0 
+		]]>
+	</select>
+	
+	
+	<select id="getListWithPaging" resultType="org.zerock.domain.BoardVO">
+	
+		select rownum, bno, title, writer, content, regdate, hit, replycnt, boardName
+		from (
+			select @rownum:=@rownum+1 as rownum, b.* 
+			from (
+				select @rownum:=0
+				) as tmp, camo_board as b
+			order by bno desc
+		) as boardlist
+        where boardName = #{boardName}
+		
+		<![CDATA[
+			and rownum > (#{pageNum} - 1) * #{amount} and rownum <= #{pageNum} * #{amount}
+		]]>
+		
+		<choose>
+			<when test="type=='T'.toString()">	<!-- ''은 char 타입이라서 .toString() 적용 -->
+				and title like concat('%', #{keyword}, '%')  <!-- concat : 문자열을 이어주는 mysql 함수 -->	
+			</when>
+			<when test="type=='C'.toString()">
+				and content like concat('%', #{keyword}, '%')
+			</when>
+			<when test="type=='W'.toString()">
+				and writer like concat('%', #{keyword}, '%')	
+			</when>
+		</choose>
+	</select>
+	
+	
+	<select id="getTotalCount" resultType="int">
+		select count(*) from camo_board
+		where boardName = #{boardName}
+	</select>
+	
+	
+	<insert id="insert">
+			<!-- 인터페이스의 메서드명을 xml의 id값으로 -->
+		insert into camo_board (bno, title, content, writer, boardName)
+		values (#{bno}, #{title}, #{content}, #{writer}, #{boardName})
+	</insert>
+	
+	
+	<insert id="insertSelectKey">	
+		<selectKey keyProperty="bno" order="BEFORE" resultType="int">
+			select max(bno)+1 as bno from camo_board
+		</selectKey>
+		
+		insert into camo_board (bno, title, content, writer, boardName)
+		values (#{bno}, #{title}, #{content}, #{writer}, #{boardName})
+	</insert>
+	
+	
+	<select id="read" resultType="org.zerock.domain.BoardVO">
+						<!-- select는 resultType이 반드시 있어야 함 -->	
+		select * from camo_board where bno = #{bno}
+	</select>
+	
+	<delete id="delete">
+		delete from camo_board where bno=#{bno}
+	</delete>
+	
+	<update id="update">
+		update camo_board
+		set title=#{title},
+			boardName=#{boardName},
+			content=#{content}
+		where bno=#{bno}
+	</update>
+	
+	<update id="updateReplyCnt">
+		update camo_board
+		set replycnt = replycnt + #{amount} 
+		where bno = #{bno}
+	</update>
+	
+	<update id="updateHit">
+      update camo_board set hit = hit + 1
+      where bno = #{bno}      
+   </update>
+   
+   <select id="recentBoardNotice" resultType="org.zerock.domain.BoardVO">
+		select title, regdate from camo_board
+		 where boardName="no" order by bno desc limit 4
+   </select>
+   <select id="recentBoardQna" resultType="org.zerock.domain.BoardVO">
+		select title, regdate from camo_board
+		where boardName="qa" order by bno desc limit 4
+   </select>
+	
+</mapper>
